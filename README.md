@@ -2,6 +2,10 @@
 
 一套面向 OpenClaw / Claude Code 风格代理的 AI 新闻工作流 skills。
 
+> English summary:
+> A pair of OpenClaw-compatible skills for AI news operations:
+> one skill collects raw news into a Feishu bitable, and the other turns a reporting window into a signal-style daily brief and morning guide.
+
 这个公开版仓库聚焦两件事：
 
 - `ai_news_fetcher`
