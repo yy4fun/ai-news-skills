@@ -78,6 +78,50 @@ skills/
 - `table_id`
 - `url`
 
+## Quick Start
+
+### 1. 克隆仓库
+
+```bash
+git clone git@github.com:yy4fun/ai-news-skills.git
+cd ai-news-skills
+```
+
+### 2. 安装到本机 OpenClaw
+
+```bash
+./install.sh
+```
+
+默认会把两个 skills 安装到：
+
+```text
+~/.openclaw/workspace/skills/
+```
+
+### 3. 填写飞书配置
+
+复制示例配置：
+
+```bash
+cp ~/.openclaw/workspace/skills/ai_news_fetcher/bitable_target.example.json \
+  ~/.openclaw/workspace/skills/ai_news_fetcher/bitable_target.json
+
+cp ~/.openclaw/workspace/skills/ai_news_reporter/bitable_target.example.json \
+  ~/.openclaw/workspace/skills/ai_news_reporter/bitable_target.json
+```
+
+然后填入你自己的飞书多维表格信息。
+
+### 4. 先单独测试
+
+建议先：
+
+- 用 `ai_news_fetcher` 测试采集
+- 再用 `ai_news_reporter` 测试日报生成
+
+确认飞书表和文档链路都正常后，再配置 cron / automation。
+
 ## 推荐工作流
 
 1. `ai_news_fetcher`
