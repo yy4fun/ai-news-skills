@@ -25,6 +25,30 @@
 - 想把采集和报告拆成两个职责清晰的 skills
 - 想参考“原始时间保真 + 发布时间标准化 + 报道窗口键”这一套结构
 
+## 依赖
+
+这套 skills 默认假设你的环境里已经有可用的网页读取能力。
+
+其中 `ai_news_fetcher` 的默认主链依赖：
+
+- `agent-reach`
+
+它主要用于：
+
+- 读取公开网页列表页文本
+- 提供较干净的标题、链接、原始时间、摘要候选
+
+如果没有 `agent-reach`：
+
+- `ai_news_fetcher` 的默认 cron 主链不会完整工作
+- 你需要自己替换成其他网页读取器，或者改写 skill 的读取层
+
+换句话说：
+
+- `ai_news_fetcher` = 采集与标准化 skill
+- `agent-reach` = 默认网页读取器
+- `ai_news_reporter` = 基于原始表的日报生成 skill
+
 ## 核心设计
 
 ### `ai_news_fetcher`
@@ -99,6 +123,12 @@ cd ai-news-skills
 ~/.openclaw/workspace/skills/
 ```
 
+注意：
+
+- 这个安装脚本只安装 `ai_news_fetcher` 和 `ai_news_reporter`
+- 不会自动安装 `agent-reach`
+- 如果你准备按默认主链运行采集，请先确保 `agent-reach` 已可用
+
 ### 3. 填写飞书配置
 
 复制示例配置：
@@ -121,6 +151,18 @@ cp ~/.openclaw/workspace/skills/ai_news_reporter/bitable_target.example.json \
 - 再用 `ai_news_reporter` 测试日报生成
 
 确认飞书表和文档链路都正常后，再配置 cron / automation。
+
+### 5. 典型触发方式
+
+安装完成后，常见用法是：
+
+- 让 `ai_news_fetcher` 采集并写入飞书原始新闻表
+- 让 `ai_news_reporter` 按 `报道窗口键` 生成日报和晨间导读
+
+如果你在 OpenClaw / Claude Code 风格环境里手动触发，建议让两个 skill 分开运行：
+
+- 先跑采集
+- 再跑报告
 
 ## 推荐工作流
 
@@ -155,6 +197,7 @@ cp ~/.openclaw/workspace/skills/ai_news_reporter/bitable_target.example.json \
 ## 后续你需要自己补的部分
 
 - 真实飞书多维表格配置
+- `agent-reach` 或你自己的网页读取器
 - 你的 cron / automation 配置
 - 目标群聊或私聊接收人
 - 你自己的新闻源维护策略
