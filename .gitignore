@@ -1,0 +1,11 @@
+# local skill config
+skills/*/bitable_target.json
+
+# python cache
+__pycache__/
+*.pyc
+
+# local temp files
+.DS_Store
+tmp/
+
