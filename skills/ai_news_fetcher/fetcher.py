@@ -25,10 +25,11 @@ PUBLIC_WEB_SOURCES = [
         "preferred_runtime": "agent-reach",
         "detail_runtime": "browser",
         "strategy": "html_list",
-        "item_css": ".subject-article-item, .news-list-item, li",
-        "css": "h2 a, .article-title a",
-        "date_css": "span.time",
-        "summary_css": ".article-intro, .brief, .desc, .summary",
+        "item_css": "div.p-t-20.p-b-20.b-b-w-1.b-b-s-s.b-c-e6e7ea",
+        "css": ".subject-interest-small-content a",
+        "title_css": ".subject-interest-small-content a strong",
+        "date_css": ".subject-interest-small-title span",
+        "summary_css": ".subject-interest-small-content a span",
         "enabled": True,
     },
     {
@@ -41,6 +42,24 @@ PUBLIC_WEB_SOURCES = [
         "css": ".article-title a, .news-item a",
         "date_css": ".publish-time",
         "summary_css": ".article-summary, .item-desc, .summary, p",
+        "include_keywords": [
+            "ai",
+            "人工智能",
+            "大模型",
+            "模型",
+            "智能体",
+            "agent",
+            "gpt",
+            "claude",
+            "openai",
+            "anthropic",
+            "kimi",
+            "deepseek",
+            "算力",
+            "推理",
+            "芯片",
+            "aigc",
+        ],
         "enabled": True,
     },
     {
@@ -168,6 +187,24 @@ def clean_text(value: Optional[str]) -> str:
     return re.sub(r"\s+", " ", value).strip()
 
 
+def selector_first_text(selection) -> Optional[str]:
+    if selection is None:
+        return None
+    get_method = getattr(selection, "get", None)
+    if callable(get_method):
+        return get_method()
+    extract_first = getattr(selection, "extract_first", None)
+    if callable(extract_first):
+        return extract_first()
+    first_attr = getattr(selection, "first", None)
+    if callable(first_attr):
+        return first_attr()
+    get_attr = getattr(first_attr, "get", None)
+    if callable(get_attr):
+        return get_attr()
+    return first_attr
+
+
 def clean_summary(value: Optional[str], title: str) -> str:
     text = clean_text(value)
     if not text:
@@ -259,13 +296,14 @@ def extract_with_item_containers(resp, source: Dict[str, str]) -> Optional[List[
 
     articles = []
     for node in item_nodes:
-        title = clean_text(node.css(f"{source.get('css', 'a')}::text").first())
+        title_selector = source.get("title_css") or source.get("css", "a")
+        title = clean_text(selector_first_text(node.css(f"{title_selector}::text")))
         if not title:
             continue
-        link = node.css(f"{source.get('css', 'a')}::attr(href)").first()
-        date_str = node.css(f"{source.get('date_css', 'time')}::text, {source.get('date_css', 'time')}::attr(datetime)").first()
+        link = selector_first_text(node.css(f"{source.get('css', 'a')}::attr(href)"))
+        date_str = selector_first_text(node.css(f"{source.get('date_css', 'time')}::text, {source.get('date_css', 'time')}::attr(datetime)"))
         summary_css = source.get("summary_css")
-        summary = clean_summary(node.css(f"{summary_css}::text").first(), title) if summary_css else ""
+        summary = clean_summary(selector_first_text(node.css(f"{summary_css}::text")), title) if summary_css else ""
         normalized_link = normalize_link(source["url"], link)
         articles.append(
             {
