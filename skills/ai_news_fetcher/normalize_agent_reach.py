@@ -90,11 +90,34 @@ def parse_date(date_str: Optional[str]) -> Optional[datetime]:
         "%B %d, %Y %H:%M",
         "%b %d, %Y",
         "%b %d, %Y %H:%M",
+        "%d %B %Y",
+        "%d %B %Y %H:%M",
+        "%d %b %Y",
+        "%d %b %Y %H:%M",
     ):
         try:
             return normalize_datetime(datetime.strptime(raw, fmt))
         except ValueError:
             continue
+
+    # English month-day without year (e.g. "Mar 18", "March 18")
+    en_month_day_patterns = (
+        (r"^(?P<month_name>[A-Z][a-z]+)\s+(?P<day>\d{1,2})$", True),
+    )
+    for pattern, _ in en_month_day_patterns:
+        match = re.match(pattern, raw)
+        if not match:
+            continue
+        month_name = match.group("month_name")
+        day = int(match.group("day"))
+        for mfmt in ("%B", "%b"):
+            try:
+                month = datetime.strptime(month_name, mfmt).month
+                candidate = datetime(now_local.year, month, day, tzinfo=LOCAL_TZ)
+                candidate = adjust_yearless_candidate(candidate, now_local)
+                return normalize_datetime(candidate)
+            except ValueError:
+                continue
 
     chinese_patterns = (
         (r"(?P<year>\d{4})年(?P<month>\d{1,2})月(?P<day>\d{1,2})日(?:\s+(?P<hour>\d{1,2}):(?P<minute>\d{1,2}))?", True),
@@ -216,12 +239,61 @@ def parse_json_payload(raw: str, default_source: str) -> Optional[List[Dict[str,
     return articles
 
 
+_TIME_LINE_RE = re.compile(
+    r"^(\d{4}-\d{2}-\d{2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)"
+    r"|^(\d{1,2}月\d{1,2}日(?:\s+\d{1,2}:\d{2})?)"
+    r"|^(\d+\s*(?:分钟|小时|天|hours?|mins?|minutes?|days?)\s*(?:前|ago)?)\s*$"
+)
+_HEADLINE_RE = re.compile(r"\*{0,2}【(.+?)】\*{0,2}")
+_NOISE_URLS = re.compile(
+    r"/(our|subject|download|vip|fm|invest|usercenter|seek-report|"
+    r"information|live|video|topics|activity|station|policy|"
+    r"newsflashes/catalog|account)"
+)
+
+
+def _is_article_url(url: str) -> bool:
+    """Filter out navigation/noise URLs, keep article links."""
+    if _NOISE_URLS.search(url):
+        return False
+    if re.search(r"/(detail|p|newsflashes)/\d+", url):
+        return True
+    if re.search(r"/news/|/blogs?/|/article", url):
+        return True
+    return False
+
+
+def _extract_headline_and_summary(link_text: str) -> tuple:
+    """Extract headline from 【headline】 pattern; rest is summary."""
+    match = _HEADLINE_RE.search(link_text)
+    if match:
+        headline = clean_text(match.group(1))
+        rest = link_text[:match.start()] + link_text[match.end():]
+        rest = re.sub(r"^\*+|\*+$", "", rest).strip()
+        summary = clean_text(rest)
+        return headline, summary
+    return clean_text(link_text), ""
+
+
+def _detect_time(text: str) -> Optional[str]:
+    """Check if a line is a standalone time indicator."""
+    stripped = text.strip()
+    match = _TIME_LINE_RE.match(stripped)
+    if match:
+        time_part = match.group(1) or match.group(2) or match.group(3)
+        if time_part:
+            return clean_text(time_part)
+    return None
+
+
 def parse_markdown_payload(raw: str, default_source: str) -> List[Dict[str, object]]:
     articles = []
     current: Dict[str, str] = {}
+    pending_time: Optional[str] = None
     url_pattern = re.compile(r"\[([^\]]+)\]\((https?://[^)]+)\)")
 
     def flush() -> None:
+        nonlocal pending_time
         if not current:
             return
         article = article_from_mapping(current, default_source)
@@ -235,11 +307,31 @@ def parse_markdown_payload(raw: str, default_source: str) -> List[Dict[str, obje
             flush()
             continue
 
+        # Detect standalone time lines (e.g. "2026-03-18 23:50 来自 第一财经", "1分钟前")
+        detected_time = _detect_time(text)
+        if detected_time:
+            if current and "url" in current and "date" not in current:
+                # Time AFTER a URL (36kr pattern): attach to current article
+                current["date"] = detected_time
+            else:
+                # Time BEFORE a URL (cls.cn pattern): remember for next article
+                pending_time = detected_time
+            continue
+
         url_match = url_pattern.search(text)
         if url_match:
-            flush()
-            current["title"] = clean_text(url_match.group(1))
-            current["url"] = clean_text(url_match.group(2))
+            url = clean_text(url_match.group(2))
+            if _is_article_url(url):
+                flush()
+                link_text = url_match.group(1)
+                headline, summary = _extract_headline_and_summary(link_text)
+                current["title"] = headline
+                current["url"] = url
+                if summary:
+                    current["summary"] = summary
+                if pending_time:
+                    current["date"] = pending_time
+                    pending_time = None
             continue
 
         if text.startswith("|") and text.endswith("|"):
@@ -262,6 +354,10 @@ def parse_markdown_payload(raw: str, default_source: str) -> List[Dict[str, obje
             current["date"] = clean_text(text.split(":", 1)[-1].split("：", 1)[-1])
         elif lowered.startswith("摘要") or lowered.startswith("summary") or lowered.startswith("导语"):
             current["summary"] = clean_text(text.split(":", 1)[-1].split("：", 1)[-1])
+        elif current and "url" in current and "summary" not in current:
+            # Body text after a URL match (e.g. 36kr flash body paragraphs)
+            if len(text) > 20 and not text.startswith(("收藏", "阅 ", "评论", "分享", "微博", "微信", "![", "[](http")):
+                current["summary"] = text
 
     flush()
     return articles

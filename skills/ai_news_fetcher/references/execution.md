@@ -35,22 +35,20 @@
 
 ## 推荐执行顺序
 
-1. 用 `agent-reach` 读取列表页。
-2. 直接从返回文本中提取候选记录。
-3. 在本轮任务内做轻量判断：
-   - 原始时间保留网页原值
-   - 只有时间文本足够明确时才生成 `发布时间`
-   - 摘要明显是标题复读或模板噪声时留空
-4. 将原始新闻写入飞书多维表格。
-5. 在写入前做轻量去重。
+1. 用 `agent-reach` 读取列表页（web channel：用 `exec` 运行 `curl -s "https://r.jina.ai/URL"`，**不要用 `web_fetch` 工具**，两者结果不同）。
+2. 把 agent-reach 返回的原始文本通过 `normalize_agent_reach.py` 提取结构化记录（时间解析、摘要清洗均由脚本完成）。
+3. 把结构化记录通过 `build_source_items.py --format bitable_records` 生成飞书入表 JSON（时间戳转换、字段映射、哈希均由脚本完成）。
+4. 在入表前做轻量去重。
+5. 将 bitable_records 写入飞书多维表格。
 6. 一旦记录成功写入，就立即结束本轮采集，不要再补抓、补写或重跑字段转换。
 
-当前默认阶段：
+典型管道命令：
 
-- 不使用浏览器兜底采集
-- 不运行本地脚本
-- `agent-reach` 读不到字段的记录直接跳过
-- 先保证 cron 链路无人值守可跑
+```bash
+curl -s "https://r.jina.ai/URL" | python3 normalize_agent_reach.py --source "财联社-AI" | python3 build_source_items.py --format bitable_records
+```
+
+也可以分步执行，每个源单独跑一次，最后汇总入表。
 
 ## cron 模式要求
 
@@ -58,14 +56,14 @@ cron 模式下必须遵守：
 
 - 不进入调试模式
 - 不读一堆文档后临场试探
-- 不运行本地 python 脚本
-- 不手工构造 JSON
+- 不临时编写调试用 python 脚本（skill 自带的 `normalize_agent_reach.py` 和 `build_source_items.py` 不在此限，它们是 cron 默认管道的一部分）
+- 不手工构造 bitable JSON 或手算 Unix 时间戳（由 `build_source_items.py` 完成）
 - 不使用 `web_search`
 - 不使用浏览器补抓
 
 正确的 cron 行为应该是：
 
-`agent-reach -> 轻量提取 -> 入表 -> 结束`
+`agent-reach (curl r.jina.ai) -> normalize_agent_reach.py -> build_source_items.py -> 入表 -> 结束`
 
 ## 入表前判断
 
@@ -97,6 +95,10 @@ cron 模式下必须遵守：
 
 如果仍无法给出可信 `发布时间`，就不要手工兜底写时间。
 
+### 时间戳转换（禁止手算）
+
+飞书日期时间字段接收 Unix 毫秒时间戳。LLM 手算时间戳极不可靠（实测经常差 1 年或数天）。**所有时间解析和时间戳转换必须通过 `normalize_agent_reach.py` + `build_source_items.py` 完成**，不要在 JSON 里直接手写 Unix 时间戳数字。
+
 ## 摘要规则
 
 - `原文摘要` 优先提取页面已有的正文摘要或导语
@@ -122,10 +124,8 @@ cron 模式下必须遵守：
 
 ## 本地脚本的角色
 
-- `normalize_agent_reach.py`
-- `build_source_items.py`
-
-这两个脚本属于补充工具，不是 cron 默认链路。
+- `normalize_agent_reach.py` — 解析 agent-reach 原始文本，提取结构化字段（标题、链接、时间、摘要），处理时间标准化。**cron 默认管道必经环节。**
+- `build_source_items.py` — 将结构化记录转为飞书 bitable 格式，完成 Unix 毫秒时间戳转换、字段映射、哈希计算。**cron 默认管道必经环节。**
 
 `fetcher.py` 当前只保留作历史调试脚本，不再作为默认采集主路径。
 

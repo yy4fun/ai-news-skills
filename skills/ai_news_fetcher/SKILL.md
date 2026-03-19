@@ -30,10 +30,6 @@ description: 当需要采集公开网页 AI 新闻、补抓某几个新闻源、
 
 - `bitable_target.json`
 
-公开仓库中默认只提供：
-
-- `bitable_target.example.json`
-
 ## 两种执行模式
 
 ### 1. 默认 cron 模式
@@ -50,8 +46,8 @@ description: 当需要采集公开网页 AI 新闻、补抓某几个新闻源、
 要求：
 
 - 生产链路必须能在没有人工确认的情况下完成
-- cron 默认不要运行 shell、本地 python 脚本或浏览器
-- 不能把“等待 exec 审批”作为 cron 的常态
+- cron 不要临时编写调试用脚本或使用浏览器；但 skill 自带的 `normalize_agent_reach.py` 和 `build_source_items.py` 是 cron 默认管道的一部分，必须使用
+- 不能把”等待 exec 审批”作为 cron 的常态（`autoAllowSkills: true` 会自动放行 skill 内的 exec）
 
 ### 2. 飞书补充模式
 
@@ -74,14 +70,15 @@ description: 当需要采集公开网页 AI 新闻、补抓某几个新闻源、
 
 ## 默认执行顺序
 
-1. 列表页优先用 `agent-reach` 读取。
-2. 直接从 `agent-reach` 结果中提取：`标题 / 原文链接 / 原始时间 / 原文摘要`。
-3. 在本轮任务内做轻量标准化：只在时间文本足够明确时生成 `发布时间`。
-4. 一旦完成写入就立即结束任务，不要再二次补抓或重写。
+1. 列表页用 `agent-reach` 读取（web channel：`exec` 运行 `curl -s "https://r.jina.ai/URL"`，**不要用 `web_fetch` 工具**）。
+2. 把 agent-reach 返回的原始文本通过 `normalize_agent_reach.py --source "源名"` 提取结构化记录。
+3. 把结构化记录通过 `build_source_items.py --format bitable_records` 生成飞书入表 JSON（时间戳转换、字段映射、哈希均由脚本完成）。
+4. 入表前做轻量去重，然后写入飞书多维表格。
+5. 一旦完成写入就立即结束任务，不要再二次补抓或重写。
 
 一句话：
 
-`agent-reach 采集 -> 轻量提取 -> 入表`
+`curl r.jina.ai -> normalize_agent_reach.py -> build_source_items.py -> 入表`
 
 ## 默认原则
 
@@ -99,7 +96,7 @@ description: 当需要采集公开网页 AI 新闻、补抓某几个新闻源、
 1. 采集任务只做“抓取并写入原始新闻表”，不要顺带生成日报、发消息、查整表、回写分析字段。
 2. `发布时间` 不靠代理临场猜测；只有能可信确认的情况下才写入。
 3. 无法可信确认 `发布时间` 时，只保留 `原始时间` 供后续排查，本轮不写入该条。
-4. cron 默认不使用浏览器兜底采集，也不运行本地脚本；`agent-reach` 读不到字段就跳过该条。
+4. cron 默认不使用浏览器兜底采集；`agent-reach` 读不到字段就跳过该条。时间解析和字段标准化必须通过 `normalize_agent_reach.py` + `build_source_items.py` 完成，不要手算时间戳。
 5. 任务结束时只返回：`写入N条` 或 `0条写入`。
 
 ## 无人值守要求
@@ -112,7 +109,7 @@ description: 当需要采集公开网页 AI 新闻、补抓某几个新闻源、
 
 当前推荐做法：
 
-- cron 只走 `agent-reach` + 轻量字段提取
+- cron 走 `agent-reach` → `normalize_agent_reach.py` → `build_source_items.py` → 入表
 - 飞书模式只做补充，不承担生产主链
 
 ## 原始新闻表字段
@@ -145,17 +142,14 @@ description: 当需要采集公开网页 AI 新闻、补抓某几个新闻源、
 - `normalize_agent_reach.py`
 - `build_source_items.py`
 
-它们的作用不是替代采集，而是补充处理：
+这两个脚本是 **cron 默认管道的必经环节**：
 
-- 从 `agent-reach` 文本中提取结构化字段
-- 时间标准化
-- 摘要清洗
-- 字段映射
+- `normalize_agent_reach.py`：从 agent-reach 原始文本中提取结构化字段、解析时间、清洗摘要
+- `build_source_items.py`：将结构化记录转为飞书 bitable 格式、完成 Unix 毫秒时间戳转换、字段映射、哈希计算
 
 补充：
 
 - `fetcher.py` 保留为历史调试/排障脚本，不再作为默认主入口。
-- 这些脚本更适合手动补抓或后续精修，不是 cron 默认入口。
 
 ## 已知坑
 
