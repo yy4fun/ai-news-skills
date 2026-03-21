@@ -88,62 +88,17 @@ agent-reach doctor    # 验证安装
 
 agent 会自动完成所有安装和配置，装完让你填飞书表信息就行。
 
-### 如果你想手动装
+### 分步安装
 
-<details>
-<summary>展开手动安装步骤</summary>
+如果你想分开装，也是发给 agent：
 
-#### 1. 安装 Agent Reach
-
-```bash
-pip install agent-reach
-agent-reach install --env=auto
-agent-reach doctor    # 验证安装
+```
+帮我安装 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
 ```
 
-#### 2. 克隆并安装 Skills
-
-```bash
-git clone git@github.com:yy4fun/ai-news-skills.git
-cd ai-news-skills
-./install.sh
 ```
-
-#### 3. 配置飞书多维表格
-
-```bash
-cp ~/.openclaw/workspace/skills/ai_news_fetcher/bitable_target.example.json \
-   ~/.openclaw/workspace/skills/ai_news_fetcher/bitable_target.json
-
-cp ~/.openclaw/workspace/skills/ai_news_reporter/bitable_target.example.json \
-   ~/.openclaw/workspace/skills/ai_news_reporter/bitable_target.json
+帮我安装 AI News Skills：https://raw.githubusercontent.com/yy4fun/ai-news-skills/main/docs/install.md
 ```
-
-编辑 `bitable_target.json`，填入你的飞书信息：
-
-```json
-{
-  "app_name": "你的应用名",
-  "app_token": "你的 app_token",
-  "table_name": "你的表名",
-  "table_id": "你的 table_id",
-  "url": "https://你的飞书域名/base/你的app_token"
-}
-```
-
-#### 4. 验证采集管道
-
-```bash
-cd ~/.openclaw/workspace/skills/ai_news_fetcher
-
-# 单源测试
-curl -s "https://r.jina.ai/https://openai.com/zh-Hans-CN/news/" \
-  | python3 normalize_agent_reach.py --source "OpenAI新闻"
-```
-
-输出 JSON 格式的结构化新闻记录就说明管道正常。
-
-</details>
 
 ## 目录结构
 
