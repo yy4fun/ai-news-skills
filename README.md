@@ -16,72 +16,6 @@
 
 支持中文源（如 36氪、财联社）、英文源（如 Forrester）、官方博客（如 OpenAI、Anthropic）、GitHub Trending 等，可按需自行增减。详见 `references/sources.md`。
 
-## 架构
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  cron 定时触发 / 飞书对话手动触发                          │
-└────────────────────┬────────────────────────────────────┘
-                     ▼
-┌─────────────── ai_news_fetcher ─────────────────────────┐
-│                                                         │
-│  curl r.jina.ai/URL          ← jina reader 转 markdown  │
-│       │                                                 │
-│       ▼                                                 │
-│  normalize_agent_reach.py    ← 提取标题/链接/时间/摘要    │
-│       │                                                 │
-│       ▼                                                 │
-│  build_source_items.py       ← 生成飞书入表 JSON         │
-│       │                                                 │
-│       ▼                                                 │
-│  写入飞书多维表格（去重）                                  │
-└─────────────────────────────────────────────────────────┘
-                     ▼
-┌─────────────── ai_news_reporter ────────────────────────┐
-│                                                         │
-│  按报道窗口键读取原始新闻                                  │
-│       │                                                 │
-│       ▼                                                 │
-│  AI 筛选高价值事件 + 阅读全文                              │
-│       │                                                 │
-│       ▼                                                 │
-│  生成日报 & 晨间导读                                      │
-└─────────────────────────────────────────────────────────┘
-```
-
-## Quick Start
-
-复制下面这句话发给你的 AI agent（Claude Code / OpenClaw / Cursor 等）：
-
-```
-帮我安装 AI News Skills：https://raw.githubusercontent.com/yy4fun/ai-news-skills/main/docs/install.md
-```
-
-agent 会自动完成所有安装和配置（包括依赖 [Agent Reach](https://github.com/Panniantong/Agent-Reach)），装完让你填飞书表信息就行。
-
-### 分步安装
-
-如果你想分开装，也是发给 agent：
-
-```
-帮我安装 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
-```
-
-```
-帮我安装 AI News Skills：https://raw.githubusercontent.com/yy4fun/ai-news-skills/main/docs/install.md
-```
-
-## 前置依赖
-
-| 依赖 | 用途 | 必须？ |
-|---|---|---|
-| [Agent Reach](https://github.com/Panniantong/Agent-Reach) | 给 AI agent 提供网页读取能力（读取 & 搜索 Twitter、Reddit、YouTube、GitHub 等） | ✅ fetcher 核心依赖 |
-| Python 3.10+ | 运行 normalize / build 脚本 | ✅ |
-| 飞书多维表格 | 存储原始新闻 & 日报输出 | ✅ |
-| OpenClaw / Claude Code | 运行 skill、cron 调度 | ✅ |
-
-> Agent Reach 底层使用 [jina reader](https://r.jina.ai) 将网页转为干净的 markdown（`curl r.jina.ai/URL`），这是 fetcher 采集管道的基础。Quick Start 中的安装命令会自动处理。
-
 ## 效果示例
 
 ### 采集输出（ai_news_fetcher）
@@ -178,6 +112,100 @@ https://飞书文档链接
 
 > 以上为示意，实际内容由 AI 根据当日新闻生成。日报模板详见 `ai_news_reporter/references/output-template.md`。
 
+## Quick Start
+
+复制下面这句话发给你的 AI agent（Claude Code / OpenClaw / Cursor 等）：
+
+```
+帮我安装 AI News Skills：https://raw.githubusercontent.com/yy4fun/ai-news-skills/main/docs/install.md
+```
+
+agent 会自动完成所有安装和配置（包括依赖 [Agent Reach](https://github.com/Panniantong/Agent-Reach)），装完让你填飞书表信息就行。
+
+### 分步安装
+
+如果你想分开装，也是发给 agent：
+
+```
+帮我安装 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
+```
+
+```
+帮我安装 AI News Skills：https://raw.githubusercontent.com/yy4fun/ai-news-skills/main/docs/install.md
+```
+
+## 安装后需要配置的内容
+
+### 1. 飞书多维表格
+
+安装脚本会自动复制配置模板，你需要填入自己的飞书信息：
+
+```json
+{
+  "app_name": "你的应用名",
+  "app_token": "你的 app_token",
+  "table_name": "你的表名",
+  "table_id": "你的 table_id",
+  "url": "https://你的飞书域名/base/你的app_token"
+}
+```
+
+配置文件位置：
+- `~/.openclaw/workspace/skills/ai_news_fetcher/bitable_target.json`
+- `~/.openclaw/workspace/skills/ai_news_reporter/bitable_target.json`
+
+### 2. 新闻源（可选）
+
+默认已配置多个中英文源，开箱即用。如需增减源，编辑 `fetcher.py` 中的 `PUBLIC_WEB_SOURCES` 列表，并在 `references/sources.md` 中同步记录。
+
+### 3. 定时采集（可选）
+
+在 OpenClaw 中配置 cron 定时任务。建议先跑 fetcher 采集入表，再跑 reporter 生成日报，两个 skill 分开运行。
+
+## 架构
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  cron 定时触发 / 飞书对话手动触发                          │
+└────────────────────┬────────────────────────────────────┘
+                     ▼
+┌─────────────── ai_news_fetcher ─────────────────────────┐
+│                                                         │
+│  curl r.jina.ai/URL          ← jina reader 转 markdown  │
+│       │                                                 │
+│       ▼                                                 │
+│  normalize_agent_reach.py    ← 提取标题/链接/时间/摘要    │
+│       │                                                 │
+│       ▼                                                 │
+│  build_source_items.py       ← 生成飞书入表 JSON         │
+│       │                                                 │
+│       ▼                                                 │
+│  写入飞书多维表格（去重）                                  │
+└─────────────────────────────────────────────────────────┘
+                     ▼
+┌─────────────── ai_news_reporter ────────────────────────┐
+│                                                         │
+│  按报道窗口键读取原始新闻                                  │
+│       │                                                 │
+│       ▼                                                 │
+│  AI 筛选高价值事件 + 阅读全文                              │
+│       │                                                 │
+│       ▼                                                 │
+│  生成日报 & 晨间导读                                      │
+└─────────────────────────────────────────────────────────┘
+```
+
+## 前置依赖
+
+| 依赖 | 用途 | 必须？ |
+|---|---|---|
+| [Agent Reach](https://github.com/Panniantong/Agent-Reach) | 给 AI agent 提供网页读取能力（读取 & 搜索 Twitter、Reddit、YouTube、GitHub 等） | ✅ fetcher 核心依赖 |
+| Python 3.10+ | 运行 normalize / build 脚本 | ✅ |
+| 飞书多维表格 | 存储原始新闻 & 日报输出 | ✅ |
+| OpenClaw / Claude Code | 运行 skill、cron 调度 | ✅ |
+
+> Agent Reach 底层使用 [jina reader](https://r.jina.ai) 将网页转为干净的 markdown（`curl r.jina.ai/URL`），这是 fetcher 采集管道的基础。Quick Start 中的安装命令会自动处理。
+
 ## 目录结构
 
 ```
@@ -214,15 +242,6 @@ skills/
 - **友好抓取**：遇到 403、验证码、登录墙就跳过，不硬刚
 - **无日期源兜底**：GitHub Trending、Google Cloud 博客等无发布时间的源，使用 `--fallback-to-now` 用抓取时间代替
 
-## 不包含的内容
-
-公开版已做脱敏，不包含：
-
-- 飞书真实 `app_token` / `table_id`
-- 真实 `open_id` / `chat_id`
-- cron 任务配置
-- 运行日志和历史回执
-
 ## 添加新源
 
 1. 在 `fetcher.py` 的 `PUBLIC_WEB_SOURCES` 列表中添加源配置
@@ -234,6 +253,15 @@ skills/
    ```
 4. 如果新源没有发布时间，在源配置中加 `"fallback_to_now": True`，命令加 `--fallback-to-now`
 5. 确认输出正常后，cron 会自动采集
+
+## 不包含的内容
+
+公开版已做脱敏，不包含：
+
+- 飞书真实 `app_token` / `table_id`
+- 真实 `open_id` / `chat_id`
+- cron 任务配置
+- 运行日志和历史回执
 
 ## License
 
