@@ -348,4 +348,4 @@ skills/
 
 ## License
 
-见 [LICENSE](LICENSE) 文件。
+[Apache License 2.0](LICENSE) — 可以自由使用、修改和分发，但需要保留版权声明和署名。
