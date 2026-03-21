@@ -1,48 +1,93 @@
 # 执行流程
 
-这个 skill 的最短闭环是：
-
-`列表页采集 -> 轻量提取 -> 轻量判断 -> 去重 -> 入表`
+最短闭环：`列表页采集 → 轻量提取 → 轻量判断 → 去重 → 入表`
 
 ## 两类入口
 
 ### cron 默认入口
 
-用于每天自动采集。
-
-目标：
-
-- 稳定
-- 无人值守
-- 少分支
-- 少调试动作
+用于每天自动采集。目标：稳定、无人值守、少分支、少调试动作。
 
 ### 飞书补充入口
 
-用于特殊场景补抓。
+用于特殊场景补抓，不替代 cron。
 
-可选注入参数：
+可选注入参数（均可缺省）：
 
-- `sources`
-- `time_range`
-- `output_target`
+- `sources` — 一个或多个源名或网址
+- `time_range` — 例如"今天""过去24小时""2026-03-17 到 2026-03-18"
+- `output_target` — 例如飞书原始表、某个文件路径
 
-说明：
+未提供时：sources 默认用主链，time_range 默认今天，output_target 默认飞书原始新闻表。
 
-- 这三个参数都可以缺省
-- 飞书补抓不是生产主链
-- 飞书补抓优先用于补充和验证，不用于替代 cron
+## 执行管道（含门控检查点）
 
-## 推荐执行顺序
+逐源执行，单源失败不阻塞其他源。
 
-1. 用 `agent-reach` 读取列表页（web channel：用 `exec` 运行 `curl -s "https://r.jina.ai/URL"`，**不要用 `web_fetch` 工具**，两者结果不同）。
-2. 把 agent-reach 返回的原始文本通过 `normalize_agent_reach.py` 提取结构化记录（时间解析、摘要清洗均由脚本完成）。
-3. 把结构化记录通过 `build_source_items.py --format bitable_records` 生成飞书入表 JSON（时间戳转换、字段映射、哈希均由脚本完成）。
-4. 在入表前做轻量去重。
-5. 将 bitable_records 写入飞书多维表格。
-6. 一旦记录成功写入，就立即结束本轮采集，不要再补抓、补写或重跑字段转换。
+### Step 1：抓取列表页
 
-典型管道命令：
+```bash
+curl -s "https://r.jina.ai/URL"
+```
+
+用 `exec` 运行，**不要用 `web_fetch` 工具**（两者结果不同）。
+
+**门控 ◆** 检查返回内容长度 > 200 字节。低于此阈值说明页面为空或被拦截 → 跳过该源，记录原因。
+
+### Step 2：结构化提取
+
+```bash
+python3 normalize_agent_reach.py --source "源名" < raw_text
+```
+
+时间解析、摘要清洗均由脚本完成。
+
+**门控 ◆** 检查脚本输出的结构化记录数 > 0。为 0 说明该源本轮无有效内容 → 跳过，不进入 build。
+
+### Step 3：生成入表 JSON
+
+```bash
+python3 build_source_items.py --format bitable_records < normalized_records
+```
+
+时间戳转换、字段映射、哈希计算均由脚本完成。
+
+**门控 ◆** 检查输出的 bitable_records 数 > 0。为 0 说明所有记录被过滤 → 跳过，不入表。
+
+### Step 4：去重 + 入表
+
+分两层去重：
+
+**第一层：批次内去重**
+
+在本轮采集的 bitable_records 内部去重：
+
+1. `原文链接` 完全一致 → 保留一条
+2. `标题哈希 + 发布时间` 一致 → 保留一条
+
+**第二层：和飞书表已有记录去重**
+
+查询飞书原始新闻表当天已有记录（按发布时间或报道窗口键过滤），对比：
+
+1. `原文链接` 已存在 → 跳过
+2. `标题哈希` 已存在且发布时间相同 → 跳过
+
+去重后将剩余的 bitable_records 写入飞书多维表格。
+
+### Step 5：结束
+
+写入成功即结束。不补抓、不补写、不重跑。
+
+### 全流程汇总
+
+所有源执行完毕后，返回汇总：
+
+```
+采集完成：N源成功（共写入X条），M源跳过
+跳过原因：[源名: 原因]
+```
+
+典型管道命令（单源）：
 
 ```bash
 curl -s "https://r.jina.ai/URL" | python3 normalize_agent_reach.py --source "财联社-AI" | python3 build_source_items.py --format bitable_records
@@ -56,14 +101,11 @@ cron 模式下必须遵守：
 
 - 不进入调试模式
 - 不读一堆文档后临场试探
-- 不临时编写调试用 python 脚本（skill 自带的 `normalize_agent_reach.py` 和 `build_source_items.py` 不在此限，它们是 cron 默认管道的一部分）
-- 不手工构造 bitable JSON 或手算 Unix 时间戳（由 `build_source_items.py` 完成）
+- 不临时编写调试用 python 脚本（skill 自带的 `normalize_agent_reach.py` 和 `build_source_items.py` 不在此限）
+- 不手工构造 bitable JSON 或手算 Unix 时间戳
 - 不使用 `web_search`
 - 不使用浏览器补抓
-
-正确的 cron 行为应该是：
-
-`agent-reach (curl r.jina.ai) -> normalize_agent_reach.py -> build_source_items.py -> 入表 -> 结束`
+- 不依赖飞书聊天内的 exec 审批或临时对话确认
 
 ## 入表前判断
 
@@ -88,16 +130,11 @@ cron 模式下必须遵守：
 
 ### 标准化阶段
 
-默认只处理足够明确的时间：
-
-- 明确的绝对日期时间
-- 在当前上下文中容易确认的当日时间文本
-
-如果仍无法给出可信 `发布时间`，就不要手工兜底写时间。
+默认只处理足够明确的时间（明确的绝对日期时间，或当前上下文中容易确认的当日时间文本）。无法给出可信 `发布时间` 时，不要手工兜底写时间。
 
 ### 时间戳转换（禁止手算）
 
-飞书日期时间字段接收 Unix 毫秒时间戳。LLM 手算时间戳极不可靠（实测经常差 1 年或数天）。**所有时间解析和时间戳转换必须通过 `normalize_agent_reach.py` + `build_source_items.py` 完成**，不要在 JSON 里直接手写 Unix 时间戳数字。
+飞书日期时间字段接收 Unix 毫秒时间戳。LLM 手算时间戳极不可靠。**所有时间解析和时间戳转换必须通过 `normalize_agent_reach.py` + `build_source_items.py` 完成**。
 
 ## 摘要规则
 
@@ -105,43 +142,16 @@ cron 模式下必须遵守：
 - 不要把标题重复写成摘要
 - 广告、推荐阅读、作者模板、站点噪声直接留空
 - `摘要哈希` 只有在 `原文摘要` 存在时才写
-- 如果 `agent-reach` 已经提取到可信摘要，不要再因为浏览器补抓把摘要覆盖成空值
-
-## 去重
-
-优先按下面顺序去重：
-
-1. `原文链接`
-2. `标题哈希 + 发布时间`
 
 ## 友好抓取
 
 - 先去重，再决定是否继续读取
 - 同一链接当天不重复阅读全文
-- 同一事件已有足够证据时，不要把所有相关文章都点开
 - 同站点连续请求要克制
 - 遇到 403、验证码、登录墙、明显限流时直接跳过
 
 ## 本地脚本的角色
 
-- `normalize_agent_reach.py` — 解析 agent-reach 原始文本，提取结构化字段（标题、链接、时间、摘要），处理时间标准化。**cron 默认管道必经环节。**
-- `build_source_items.py` — 将结构化记录转为飞书 bitable 格式，完成 Unix 毫秒时间戳转换、字段映射、哈希计算。**cron 默认管道必经环节。**
-
-`sources.json` — 所有新闻源的唯一配置文件。加减源只改这一个文件。
-
-## 飞书补充模式参数约定
-
-如果用户在飞书里临时发起补抓，可以接受这些可选参数：
-
-- `sources`
-  - 一个或多个源名或网址
-- `time_range`
-  - 例如“今天”“过去24小时”“2026-03-17 到 2026-03-18”
-- `output_target`
-  - 例如飞书原始表、某个文件路径、某个文档
-
-如果这些参数未提供：
-
-- `sources` 默认用主链
-- `time_range` 默认用今天
-- `output_target` 默认写飞书原始新闻表
+- `normalize_agent_reach.py` — 解析 agent-reach 原始文本，提取结构化字段，处理时间标准化。**cron 管道必经环节。**
+- `build_source_items.py` — 将结构化记录转为飞书 bitable 格式，完成时间戳转换、字段映射、哈希计算。**cron 管道必经环节。**
+- `sources.json` — 所有新闻源的唯一配置文件。加减源只改这一个文件。

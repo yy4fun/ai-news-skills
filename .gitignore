@@ -1,5 +1,6 @@
-# local skill config
+# local skill config (contains table_id, app_token etc.)
 skills/*/bitable_target.json
+skills/*/watch_target.json
 
 # python cache
 __pycache__/
