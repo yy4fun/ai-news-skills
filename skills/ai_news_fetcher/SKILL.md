@@ -19,7 +19,9 @@ description: >
 - **Agent Reach**：需要安装 [Agent Reach](https://github.com/Panniantong/Agent-Reach)，用于将网页转为结构化文本
 - **Python 3.10+**：运行 normalize / build 脚本
 
-> 本 skill 不内置任何飞书凭证。`bitable_target.json` 由用户在本地创建，已被 `.gitignore` 排除。
+> **凭证说明**：本 skill 不内置任何飞书凭证。`bitable_target.json` 由用户在本地创建，已被 `.gitignore` 排除。仓库中的 `bitable_target.example.json` 仅包含占位符（`YOUR_APP_TOKEN` 等），不含真实令牌。
+
+> **第三方服务**：本 skill 使用 [Jina Reader](https://r.jina.ai)（免费、无需 API key）将公开网页转为 markdown 文本。采集时，目标网页的 URL 会发送到 `r.jina.ai`，返回的纯文本用于结构化提取。不会发送飞书凭证或用户数据。
 
 ## 执行前必读
 

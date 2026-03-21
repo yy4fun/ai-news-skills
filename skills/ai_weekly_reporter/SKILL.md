@@ -22,7 +22,11 @@ description: >
 - **ai_news_reporter**：周报依赖日报数据（本地 MD 或飞书 wiki）、产业链图谱（`watch_chains.md`）和关注清单表配置（`watch_target.json`）
 - **飞书 wiki 知识库**：周报文档挂载到飞书知识库（可选）
 
-> 本 skill 不内置任何飞书凭证。凭证配置在 `ai_news_reporter` 中管理，已被 `.gitignore` 排除。
+> **凭证说明**：本 skill 不内置任何飞书凭证。凭证配置在 `ai_news_reporter` 中管理，已被 `.gitignore` 排除。
+
+> **第三方服务**：深度解读环节需要阅读原文全文，使用 [Jina Reader](https://r.jina.ai)（免费、无需 API key）读取公开网页。目标文章的 URL 会发送到 `r.jina.ai`，不会发送飞书凭证或用户数据。
+
+> **跨 skill 文件读写**：本 skill 会读取并更新 `ai_news_reporter/references/watch_chains.md`（产业链观察图谱），以及读取 `ai_news_reporter/watch_target.json`（关注清单表配置）。这是设计上的协作关系：三个 skill 共享同一套产业链观察体系，日报产出信号 → 周报合成趋势并更新判断基线 → 更新后的基线反过来指导下一周日报的高价值筛选。
 
 ## 执行前必读
 

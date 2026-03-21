@@ -23,7 +23,11 @@ description: >
 - **ai_news_fetcher**：日报依赖 fetcher 采集的原始新闻数据
 - **飞书 wiki 知识库**：日报文档挂载到飞书知识库（可选）
 
-> 本 skill 不内置任何飞书凭证。配置文件由用户在本地创建，已被 `.gitignore` 排除。
+> **凭证说明**：本 skill 不内置任何飞书凭证。配置文件由用户在本地创建，已被 `.gitignore` 排除。仓库中的 `.example.json` 仅包含占位符，不含真实令牌。
+
+> **第三方服务**：日报生成时，高价值事件需要阅读原文全文。本 skill 使用 [Jina Reader](https://r.jina.ai)（免费、无需 API key）读取公开网页原文。目标文章的 URL 会发送到 `r.jina.ai`，不会发送飞书凭证或用户数据。
+
+> **跨 skill 文件**：本 skill 拥有 `references/watch_chains.md`（产业链观察图谱）和 `watch_target.json`（关注清单表配置），`ai_weekly_reporter` 会读取并更新 `watch_chains.md`。这是设计上的协作关系：日报产出信号 → 周报合成趋势并更新观察链判断基线。
 
 ## 执行前必读
 
