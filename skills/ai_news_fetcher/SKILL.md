@@ -13,6 +13,14 @@ description: >
 
 不负责：生成日报、归并事件、写判断更新、发送早报消息 → 交给 `ai_news_reporter`
 
+## 前置依赖
+
+- **飞书多维表格**：需要一张飞书 Bitable 表用于存储原始新闻，将表的 `app_token` 和 `table_id` 填入 `bitable_target.json`（参考 `bitable_target.example.json`）
+- **Agent Reach**：需要安装 [Agent Reach](https://github.com/Panniantong/Agent-Reach)，用于将网页转为结构化文本
+- **Python 3.10+**：运行 normalize / build 脚本
+
+> 本 skill 不内置任何飞书凭证。`bitable_target.json` 由用户在本地创建，已被 `.gitignore` 排除。
+
 ## 执行前必读
 
 - `references/execution.md` — 执行流程、门控检查点、模式说明

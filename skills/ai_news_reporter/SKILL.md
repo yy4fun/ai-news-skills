@@ -17,6 +17,14 @@ description: >
 
 日报 = 汇总过去 24 小时的原始新闻，提炼成 signal 文档。默认时间窗口是过去 24 小时，可由用户指定其他范围。
 
+## 前置依赖
+
+- **飞书多维表格**：需要原始新闻表（`bitable_target.json`）和关注清单表（`watch_target.json`），将表的 `app_token`、`table_id` 等信息填入对应配置文件（参考 `.example.json`）
+- **ai_news_fetcher**：日报依赖 fetcher 采集的原始新闻数据
+- **飞书 wiki 知识库**：日报文档挂载到飞书知识库（可选）
+
+> 本 skill 不内置任何飞书凭证。配置文件由用户在本地创建，已被 `.gitignore` 排除。
+
 ## 执行前必读
 
 - `references/reporting.md` — 执行流程、高价值判断标准、写作规则、门控检查点

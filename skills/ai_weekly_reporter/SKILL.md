@@ -17,6 +17,13 @@ description: >
 
 周报 = 把一周的日报信号关联起来，找出趋势线，更新产业链判断基线。周报不是日报合集，是趋势文档。
 
+## 前置依赖
+
+- **ai_news_reporter**：周报依赖日报数据（本地 MD 或飞书 wiki）、产业链图谱（`watch_chains.md`）和关注清单表配置（`watch_target.json`）
+- **飞书 wiki 知识库**：周报文档挂载到飞书知识库（可选）
+
+> 本 skill 不内置任何飞书凭证。凭证配置在 `ai_news_reporter` 中管理，已被 `.gitignore` 排除。
+
 ## 执行前必读
 
 - `references/reporting.md` — 执行流程、门控检查点、信号关联规则
