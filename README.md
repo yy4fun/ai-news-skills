@@ -11,25 +11,10 @@
          fetcher                            reporter
 ```
 
-- **`ai_news_fetcher`** — 从 12 个公开源自动抓取 AI 新闻，写入飞书多维表格
+- **`ai_news_fetcher`** — 从多个公开源自动抓取 AI 新闻，写入飞书多维表格
 - **`ai_news_reporter`** — 从飞书表读取新闻，AI 筛选高价值事件，生成日报
 
-### 已接入的新闻源
-
-| 源 | 类型 | 说明 |
-|---|---|---|
-| 财联社-AI | 中文 | 金融科技视角 |
-| 36氪-AI / 36氪快讯 | 中文 | 创投视角 |
-| Readhub-AI | 中文 | 聚合 |
-| OpenAI 新闻 | 官方 | 产品/研究/安全动态 |
-| Anthropic 新闻 | 官方 | 产品/研究/政策动态 |
-| GitHub Trending | 代码 | 每日热门 AI 项目（关键词过滤） |
-| Google Cloud 博客 | 官方 | 云 AI 产品更新 |
-| Forrester 博客 | 英文 | 行业分析 |
-| CMSWire | 英文 | 企业技术 |
-| CX Today | 英文 | 客户体验/AI |
-
-> Google DeepMind 博客已注册但暂停（jina reader 无法提取标题/日期，需 browser 模式）
+支持中文源（如 36氪、财联社）、英文源（如 Forrester）、官方博客（如 OpenAI、Anthropic）、GitHub Trending 等，可按需自行增减。详见 `references/sources.md`。
 
 ## 架构
 
@@ -68,19 +53,30 @@
 
 | 依赖 | 用途 | 必须？ |
 |---|---|---|
-| [jina reader](https://r.jina.ai) | 将网页转为干净的 markdown（通过 `curl r.jina.ai/URL` 调用） | ✅ fetcher 核心依赖 |
+| [Agent Reach](https://github.com/Panniantong/Agent-Reach) | 给 AI agent 提供网页读取能力（读取 & 搜索 Twitter、Reddit、YouTube、GitHub 等） | ✅ fetcher 核心依赖 |
 | Python 3.10+ | 运行 normalize / build 脚本 | ✅ |
 | 飞书多维表格 | 存储原始新闻 & 日报输出 | ✅ |
 | OpenClaw / Claude Code | 运行 skill、cron 调度 | ✅ |
 
-### 验证 jina reader 是否可用
+### 关于 Agent Reach
 
-```bash
-# 随便抓一个页面试试，能看到 markdown 输出就 OK
-curl -s "https://r.jina.ai/https://openai.com/zh-Hans-CN/news/" | head -50
+`./install.sh` 会自动安装 Agent Reach。如果你想单独安装或在其他 AI agent 环境中使用，也可以：
+
+**方式一**：在 AI agent（Claude Code / OpenClaw / Cursor 等）里发送：
+
+```
+帮我安装 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
 ```
 
-如果能看到 markdown 格式的网页内容，说明 jina reader 正常工作。这就是 fetcher 的 "agent-reach" 读取层——不需要额外安装任何包。
+**方式二**：手动安装：
+
+```bash
+pip install agent-reach
+agent-reach install --env=auto
+agent-reach doctor    # 验证安装
+```
+
+> Agent Reach 底层使用 [jina reader](https://r.jina.ai) 将网页转为干净的 markdown（`curl r.jina.ai/URL`），这是 fetcher 采集管道的基础。
 
 ## Quick Start
 
@@ -91,13 +87,17 @@ git clone git@github.com:yy4fun/ai-news-skills.git
 cd ai-news-skills
 ```
 
-### 2. 安装 skills
+### 2. 一键安装
 
 ```bash
 ./install.sh
 ```
 
-会把 `ai_news_fetcher` 和 `ai_news_reporter` 安装到 `~/.openclaw/workspace/skills/`。
+安装脚本会自动完成：
+
+1. 检测并安装 [Agent Reach](https://github.com/Panniantong/Agent-Reach)（如未安装）
+2. 把 `ai_news_fetcher` 和 `ai_news_reporter` 安装到 `~/.openclaw/workspace/skills/`
+3. 运行 `agent-reach doctor` 验证环境
 
 ### 3. 配置飞书多维表格
 
