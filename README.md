@@ -80,20 +80,13 @@ agent-reach doctor    # 验证安装
 
 ## Quick Start
 
-把下面这段话发给你的 AI agent（Claude Code / OpenClaw / Cursor 等），它会自动完成所有安装：
+复制下面这句话发给你的 AI agent（Claude Code / OpenClaw / Cursor 等）：
 
 ```
-帮我安装 AI News Skills：
-
-1. 先装 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
-2. 然后克隆并安装 skills：
-   git clone git@github.com:yy4fun/ai-news-skills.git
-   cd ai-news-skills && ./install.sh
-3. 把 bitable_target.example.json 复制为 bitable_target.json，我来填飞书配置
-4. 跑一次采集测试，确认管道正常
+帮我安装 AI News Skills：https://raw.githubusercontent.com/yy4fun/ai-news-skills/main/docs/install.md
 ```
 
-就这样，agent 会帮你搞定。
+agent 会自动完成所有安装和配置，装完让你填飞书表信息就行。
 
 ### 如果你想手动装
 
