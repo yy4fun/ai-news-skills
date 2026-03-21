@@ -49,35 +49,6 @@
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 前置依赖
-
-| 依赖 | 用途 | 必须？ |
-|---|---|---|
-| [Agent Reach](https://github.com/Panniantong/Agent-Reach) | 给 AI agent 提供网页读取能力（读取 & 搜索 Twitter、Reddit、YouTube、GitHub 等） | ✅ fetcher 核心依赖 |
-| Python 3.10+ | 运行 normalize / build 脚本 | ✅ |
-| 飞书多维表格 | 存储原始新闻 & 日报输出 | ✅ |
-| OpenClaw / Claude Code | 运行 skill、cron 调度 | ✅ |
-
-### 关于 Agent Reach
-
-`./install.sh` 会自动安装 Agent Reach。如果你想单独安装或在其他 AI agent 环境中使用，也可以：
-
-**方式一**：在 AI agent（Claude Code / OpenClaw / Cursor 等）里发送：
-
-```
-帮我安装 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
-```
-
-**方式二**：手动安装：
-
-```bash
-pip install agent-reach
-agent-reach install --env=auto
-agent-reach doctor    # 验证安装
-```
-
-> Agent Reach 底层使用 [jina reader](https://r.jina.ai) 将网页转为干净的 markdown（`curl r.jina.ai/URL`），这是 fetcher 采集管道的基础。
-
 ## Quick Start
 
 复制下面这句话发给你的 AI agent（Claude Code / OpenClaw / Cursor 等）：
@@ -86,7 +57,7 @@ agent-reach doctor    # 验证安装
 帮我安装 AI News Skills：https://raw.githubusercontent.com/yy4fun/ai-news-skills/main/docs/install.md
 ```
 
-agent 会自动完成所有安装和配置，装完让你填飞书表信息就行。
+agent 会自动完成所有安装和配置（包括依赖 [Agent Reach](https://github.com/Panniantong/Agent-Reach)），装完让你填飞书表信息就行。
 
 ### 分步安装
 
@@ -99,6 +70,17 @@ agent 会自动完成所有安装和配置，装完让你填飞书表信息就�
 ```
 帮我安装 AI News Skills：https://raw.githubusercontent.com/yy4fun/ai-news-skills/main/docs/install.md
 ```
+
+## 前置依赖
+
+| 依赖 | 用途 | 必须？ |
+|---|---|---|
+| [Agent Reach](https://github.com/Panniantong/Agent-Reach) | 给 AI agent 提供网页读取能力（读取 & 搜索 Twitter、Reddit、YouTube、GitHub 等） | ✅ fetcher 核心依赖 |
+| Python 3.10+ | 运行 normalize / build 脚本 | ✅ |
+| 飞书多维表格 | 存储原始新闻 & 日报输出 | ✅ |
+| OpenClaw / Claude Code | 运行 skill、cron 调度 | ✅ |
+
+> Agent Reach 底层使用 [jina reader](https://r.jina.ai) 将网页转为干净的 markdown（`curl r.jina.ai/URL`），这是 fetcher 采集管道的基础。Quick Start 中的安装命令会自动处理。
 
 ## 效果示例
 
