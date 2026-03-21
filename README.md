@@ -8,11 +8,15 @@
 
 ```
 公开网页 ──→ 自动采集 ──→ 飞书原始新闻表 ──→ AI 筛选 ──→ 日报 & 晨间导读
-         fetcher                            reporter
+         fetcher                            reporter       │
+                                                           ▼
+                                              周报 & 深度解读 & 观察链更新
+                                                    weekly_reporter
 ```
 
 - **`ai_news_fetcher`** — 从多个公开源自动抓取 AI 新闻，写入飞书多维表格
-- **`ai_news_reporter`** — 从飞书表读取新闻，AI 筛选高价值事件，生成日报
+- **`ai_news_reporter`** — 从飞书表读取新闻，AI 筛选高价值事件，生成日报和晨间导读
+- **`ai_weekly_reporter`** — 基于本周日报合成趋势线，深度解读，更新产业链观察图谱
 
 支持中文源（如 36氪、财联社）、英文源（如 Forrester）、官方博客（如 OpenAI、Anthropic）、GitHub Trending 等，可按需自行增减。详见 `references/sources.md`。
 
@@ -158,9 +162,61 @@ agent 会自动完成所有安装和配置（包括依赖 [Agent Reach](https://
 
 默认已配置多个中英文源，开箱即用。如需增减源，只需编辑 `sources.json` 这一个文件。
 
-### 3. 定时采集（可选）
+### 3. 关注清单表（可选）
 
-在 OpenClaw 中配置 cron 定时任务。建议先跑 fetcher 采集入表，再跑 reporter 生成日报，两个 skill 分开运行。
+如果你想用产业链观察和关注清单功能，还需要：
+- 在飞书创建一张关注清单多维表格
+- 填入 `ai_news_reporter/watch_target.json`（参考 `watch_target.example.json`）
+
+### 4. 定时任务（可选）
+
+在 OpenClaw 中配置 cron 定时任务，实现全自动采集 → 日报 → 周报。
+
+把下面的指令发给你的 AI agent，它会帮你创建定时任务：
+
+#### 新闻采集（建议每天 3-4 次）
+
+```
+帮我创建一个 cron 定时任务：
+- 名称：AI新闻采集-08:30
+- 时间：每天 08:30
+- 内容：使用 ai_news_fetcher skill 采集公开网页新闻并写入原始新闻表
+- 目标表：填你的 app_token 和 table_id
+- 备注字段写 cron:08:30
+- 完成后回执发给我
+```
+
+#### 日报生成（建议每天早上 1 次，在采集之后）
+
+```
+帮我创建一个 cron 定时任务：
+- 名称：AI日报生成-09:00
+- 时间：每天 09:00
+- 内容：使用 ai_news_reporter skill，基于飞书原始新闻表生成当天 AI 日报并发送早报导读
+- 报道窗口键格式：YYYY-MM-DD-0900
+- 日报发到知识库，早报导读发到群聊
+- 日报同时保存一份到 workspace/daily_reports/YYYY-MM-DD.md
+- 填你的 app_token、table_id、知识库 URL、群聊 chat_id
+- 完成后回执发给我
+```
+
+#### 周报生成（建议每周日 1 次）
+
+```
+帮我创建一个 cron 定时任务：
+- 名称：AI周报生成-周日09:20
+- 时间：每周日 09:20
+- 内容：使用 ai_weekly_reporter skill 生成本周 AI 周报
+- 读取本周一至周日的日报，优先本地 MD，没有的从飞书读
+- 每条趋势线对照 watch_chains.md 写判断变化
+- 选一个最重要话题做深度解读（必须读原文）
+- 周报发到知识库和群聊，同时保存到 workspace/weekly_reports/
+- 生成后更新 watch_chains.md
+- 填你的知识库 URL、群聊 chat_id
+- 完成后回执发给我，包含过程日志
+```
+
+> **提示**：建议采集和日报之间留 30 分钟间隔，确保新闻入表后再生成日报。多轮采集可以分布在 05:00、08:30、12:00、18:00 等时段。
 
 ## 架构
 
@@ -180,18 +236,32 @@ agent 会自动完成所有安装和配置（包括依赖 [Agent Reach](https://
 │  build_source_items.py       ← 生成飞书入表 JSON         │
 │       │                                                 │
 │       ▼                                                 │
-│  写入飞书多维表格（去重）                                  │
+│  两层去重 → 写入飞书多维表格                               │
 └─────────────────────────────────────────────────────────┘
                      ▼
 ┌─────────────── ai_news_reporter ────────────────────────┐
 │                                                         │
-│  按报道窗口键读取原始新闻                                  │
+│  读取关注清单 + 产业链图谱 (watch_chains.md)               │
 │       │                                                 │
 │       ▼                                                 │
-│  AI 筛选高价值事件 + 阅读全文                              │
+│  按报道窗口键读取原始新闻 → 两层高价值筛选                  │
 │       │                                                 │
 │       ▼                                                 │
-│  生成日报 & 晨间导读                                      │
+│  阅读全文 → 生成日报 & 晨间导读 → 更新关注清单              │
+└─────────────────────────────────────────────────────────┘
+                     ▼ (每周日)
+┌─────────────── ai_weekly_reporter ──────────────────────┐
+│                                                         │
+│  读取本周日报 + 产业链图谱                                 │
+│       │                                                 │
+│       ▼                                                 │
+│  跨天信号关联 → 合成趋势线                                 │
+│       │                                                 │
+│       ▼                                                 │
+│  深度解读（阅读原文）→ 生成周报                            │
+│       │                                                 │
+│       ▼                                                 │
+│  更新 watch_chains.md → 审视关注清单                      │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -225,20 +295,33 @@ skills/
 │   └── tests/
 │       └── test_parse_date.py            # 时间解析测试
 │
-└── ai_news_reporter/
+├── ai_news_reporter/
+│   ├── SKILL.md
+│   ├── _meta.json
+│   ├── build_daily_report.py             # 日报生成
+│   ├── build_event_candidates.py         # 事件筛选
+│   ├── build_signals.py                  # 信号提取
+│   ├── bitable_target.example.json
+│   ├── watch_target.example.json         # 关注清单表配置示例
+│   └── references/
+│       ├── reporting.md                  # 日报执行流程
+│       ├── output-template.md            # 日报 & 早报模板
+│       ├── watch_chains.md               # 产业链关注图谱
+│       └── gotchas.md                    # 踩坑记录
+│
+└── ai_weekly_reporter/
     ├── SKILL.md
-    ├── _meta.json
-    ├── build_daily_report.py             # 日报生成
-    ├── build_event_candidates.py         # 事件筛选
-    ├── build_signals.py                  # 信号提取
-    ├── bitable_target.example.json
     └── references/
+        ├── reporting.md                  # 周报执行流程
+        └── output-template.md            # 周报模板
 ```
 
 ## 核心设计原则
 
 - **原始时间保真**：`原始时间` 原样保留，`发布时间` 只在可信确认时才写入
-- **采集与报告分离**：fetcher 只管抓和入表，reporter 只管读和生成
+- **采集与报告分离**：fetcher 只管抓和入表，reporter 只管读和生成，weekly_reporter 只管趋势合成
+- **观察链驱动**：`watch_chains.md` 记录产业链判断基线，日报筛选和周报合成都参照它
+- **反馈闭环**：日报产出待验证问题 → 关注清单 → 后续日报回答 → 周报审视清理
 - **友好抓取**：遇到 403、验证码、登录墙就跳过，不硬刚
 - **无日期源兜底**：GitHub Trending、Google Cloud 博客等无发布时间的源，使用 `--fallback-to-now` 用抓取时间代替
 
