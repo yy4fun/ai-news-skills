@@ -187,7 +187,7 @@ def parse_date(date_str: Optional[str]) -> Optional[datetime]:
     return None
 
 
-def article_from_mapping(item: Dict[str, object], default_source: str) -> Optional[Dict[str, object]]:
+def article_from_mapping(item: Dict[str, object], default_source: str, fallback_to_now: bool = False) -> Optional[Dict[str, object]]:
     title = clean_text(item.get("title"))
     url = clean_text(item.get("url") or item.get("link"))
     original_time = clean_text(
@@ -198,11 +198,17 @@ def article_from_mapping(item: Dict[str, object], default_source: str) -> Option
     )
     summary = normalize_summary(item.get("summary") or item.get("excerpt") or item.get("description"), title)
     source = clean_text(item.get("source")) or default_source
-    if not title or not url or not original_time:
+    if not title or not url:
         return None
+    if not original_time:
+        if not fallback_to_now:
+            return None
+        original_time = "now"
     parsed_date = parse_date(original_time)
     if not parsed_date:
-        return None
+        if not fallback_to_now:
+            return None
+        parsed_date = normalize_datetime(current_local_now())
     return {
         "title": title,
         "url": url,
@@ -213,7 +219,7 @@ def article_from_mapping(item: Dict[str, object], default_source: str) -> Option
     }
 
 
-def parse_json_payload(raw: str, default_source: str) -> Optional[List[Dict[str, object]]]:
+def parse_json_payload(raw: str, default_source: str, fallback_to_now: bool = False) -> Optional[List[Dict[str, object]]]:
     try:
         payload = json.loads(raw)
     except json.JSONDecodeError:
@@ -233,7 +239,7 @@ def parse_json_payload(raw: str, default_source: str) -> Optional[List[Dict[str,
     for item in items:
         if not isinstance(item, dict):
             continue
-        article = article_from_mapping(item, default_source)
+        article = article_from_mapping(item, default_source, fallback_to_now=fallback_to_now)
         if article:
             articles.append(article)
     return articles
@@ -252,19 +258,60 @@ _NOISE_URLS = re.compile(
 )
 
 
+_GITHUB_NAV_PATHS = re.compile(
+    r"^https?://github\.com/(features|solutions|enterprise|team|security|resources|"
+    r"login|signup|settings|marketplace|about|pricing|customer-stories|why-github|"
+    r"explore|topics|collections|events|sponsors|readme|organizations|trending|"
+    r"\.github|apps|codespaces|discussions|notifications|stars|watching|search|new|"
+    r"site|docs|blog|changelog|skills|mcp|repositories)(/|$)",
+    re.IGNORECASE,
+)
+
+
 def _is_article_url(url: str) -> bool:
     """Filter out navigation/noise URLs, keep article links."""
     if _NOISE_URLS.search(url):
         return False
     if re.search(r"/(detail|p|newsflashes)/\d+", url):
         return True
-    if re.search(r"/news/|/blogs?/|/article", url):
+    if re.search(r"/news/|/blogs?/|/articles?/", url):
+        return True
+    # OpenAI /index/ article URLs
+    if re.search(r"openai\.com/(index|zh-Hans-CN/index)/.+", url):
+        return True
+    # GitHub repo URLs (trending page items) — exclude known non-repo paths
+    if re.match(r"https?://github\.com/[^/]+/[^/]+/?$", url):
+        if not _GITHUB_NAV_PATHS.match(url):
+            return True
+    # Google DeepMind and Cloud blog post URLs
+    if re.search(r"deepmind\.google/(discover/)?blog/.+", url):
+        return True
+    if re.search(r"cloud\.google\.com/blog/.+", url):
         return True
     return False
 
 
+# Patterns to extract date + title from jina reader link text
+# OpenAI: "标题 类别 2026年3月19日"
+_OPENAI_LINK_RE = re.compile(
+    r"^(.+?)\s+(?:安全|公司|产品|研究|工程|安全防护|政策|Education|Company|Product|Research|Engineering|Safety)\s+"
+    r"(\d{4}年\d{1,2}月\d{1,2}日)$"
+)
+# Anthropic featured: "Category MonDD, YYYY #### Title Description"
+_ANTHROPIC_FEATURED_RE = re.compile(
+    r"^(?:Product|Announcements|Policy|Research|Company|Safety)\s+"
+    r"((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4})\s+"
+    r"#{1,4}\s+(.+?)(?:\s{2,}(.+))?$"
+)
+# Anthropic list: "MonDD, YYYY Category Title"
+_ANTHROPIC_LIST_RE = re.compile(
+    r"^((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4})\s+"
+    r"(?:Product|Announcements|Policy|Research|Company|Safety)\s+(.+)$"
+)
+
+
 def _extract_headline_and_summary(link_text: str) -> tuple:
-    """Extract headline from 【headline】 pattern; rest is summary."""
+    """Extract headline from 【headline】 pattern or structured link text; rest is summary."""
     match = _HEADLINE_RE.search(link_text)
     if match:
         headline = clean_text(match.group(1))
@@ -273,6 +320,52 @@ def _extract_headline_and_summary(link_text: str) -> tuple:
         summary = clean_text(rest)
         return headline, summary
     return clean_text(link_text), ""
+
+
+def _extract_date_from_link_text(link_text: str) -> tuple:
+    """Try to extract embedded date from link text for OpenAI/Anthropic patterns.
+
+    Returns (title, date_str, summary) or (None, None, None) if no match.
+    """
+    # OpenAI pattern: "标题 类别 2026年3月19日"
+    m = _OPENAI_LINK_RE.match(link_text.strip())
+    if m:
+        return clean_text(m.group(1)), clean_text(m.group(2)), ""
+
+    # Anthropic featured: "Category Feb 17, 2026 #### Title Summary"
+    m = _ANTHROPIC_FEATURED_RE.match(link_text.strip())
+    if m:
+        return clean_text(m.group(2)), clean_text(m.group(1)), clean_text(m.group(3) or "")
+
+    # Anthropic list: "Mar 12, 2026 Announcements Title"
+    m = _ANTHROPIC_LIST_RE.match(link_text.strip())
+    if m:
+        return clean_text(m.group(2)), clean_text(m.group(1)), ""
+
+    # Google Cloud Blog pattern: "Category ### Title By Author • N-minute read"
+    # or "#### Title" or "Category ##### Title By Author..."
+    text = link_text.strip()
+    # Strip "By Author • N-minute read" suffix
+    text_no_author = re.sub(r"\s+By\s+[^•]+•\s+\d+-minute read$", "", text)
+    # Strip heading markers
+    text_no_heading = re.sub(r"#{1,6}\s+", "", text_no_author)
+    # Strip known category prefixes
+    _CLOUD_CATEGORIES = (
+        "AI & Machine Learning", "Data Analytics", "Databases", "Compute",
+        "Containers & Kubernetes", "Serverless", "Networking", "Infrastructure",
+        "Security & Identity", "Application Modernization", "Chrome Enterprise",
+        "Threat Intelligence", "Training and Certifications", "DevOps & SRE",
+        "Google Cloud", "Workspace",
+    )
+    cleaned = text_no_heading.strip()
+    for cat in _CLOUD_CATEGORIES:
+        if cleaned.startswith(cat):
+            cleaned = cleaned[len(cat):].strip()
+            break
+    if cleaned and len(cleaned) > 10 and cleaned != clean_text(link_text):
+        return clean_text(cleaned), None, ""
+
+    return None, None, None
 
 
 def _detect_time(text: str) -> Optional[str]:
@@ -286,7 +379,23 @@ def _detect_time(text: str) -> Optional[str]:
     return None
 
 
-def parse_markdown_payload(raw: str, default_source: str) -> List[Dict[str, object]]:
+_AUTHOR_TIME_RE = re.compile(
+    r"\]\([^)]*\)\s*(\d+\s*(?:分钟|小时|天|hours?|mins?|minutes?|days?)\s*(?:前|ago)?)\s*$"
+)
+
+
+def _extract_time_suffix(text: str) -> Optional[str]:
+    """Extract relative time from author+time lines like '[Author](user_url)1小时前'."""
+    match = _AUTHOR_TIME_RE.search(text)
+    if match:
+        return clean_text(match.group(1))
+    return None
+
+
+_INLINE_IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]*\)\s*")
+
+
+def parse_markdown_payload(raw: str, default_source: str, fallback_to_now: bool = False) -> List[Dict[str, object]]:
     articles = []
     current: Dict[str, str] = {}
     pending_time: Optional[str] = None
@@ -296,7 +405,7 @@ def parse_markdown_payload(raw: str, default_source: str) -> List[Dict[str, obje
         nonlocal pending_time
         if not current:
             return
-        article = article_from_mapping(current, default_source)
+        article = article_from_mapping(current, default_source, fallback_to_now=fallback_to_now)
         if article:
             articles.append(article)
         current.clear()
@@ -304,6 +413,10 @@ def parse_markdown_payload(raw: str, default_source: str) -> List[Dict[str, obje
     for line in raw.splitlines():
         text = clean_text(line)
         if not text:
+            # Don't flush if we have a URL but no date yet — 36kr motif pattern:
+            # title and summary are in separate paragraphs, time comes on author line.
+            if current and "url" in current and "date" not in current:
+                continue
             flush()
             continue
 
@@ -318,20 +431,47 @@ def parse_markdown_payload(raw: str, default_source: str) -> List[Dict[str, obje
                 pending_time = detected_time
             continue
 
-        url_match = url_pattern.search(text)
+        # Strip inline image markdown before searching for links (handles nested [![img](url) text](url))
+        text_for_url = _INLINE_IMAGE_RE.sub("", text)
+        url_match = url_pattern.search(text_for_url)
+        if not url_match:
+            url_match = url_pattern.search(text)
         if url_match:
             url = clean_text(url_match.group(2))
             if _is_article_url(url):
-                flush()
-                link_text = url_match.group(1)
-                headline, summary = _extract_headline_and_summary(link_text)
-                current["title"] = headline
-                current["url"] = url
-                if summary:
-                    current["summary"] = summary
-                if pending_time:
-                    current["date"] = pending_time
-                    pending_time = None
+                if current.get("url") == url and "title" in current:
+                    # Same URL as current article → this is the summary text (36kr motif pattern)
+                    link_text = url_match.group(1)
+                    summary_text = clean_text(link_text)
+                    if summary_text and summary_text != current.get("title") and not current.get("summary"):
+                        current["summary"] = summary_text
+                else:
+                    flush()
+                    link_text = url_match.group(1)
+                    # Try structured date extraction (OpenAI/Anthropic/Cloud Blog jina patterns)
+                    ext_title, ext_date, ext_summary = _extract_date_from_link_text(link_text)
+                    if ext_title:
+                        current["title"] = ext_title
+                        current["url"] = url
+                        if ext_date:
+                            current["date"] = ext_date
+                        if ext_summary:
+                            current["summary"] = ext_summary
+                    else:
+                        headline, summary = _extract_headline_and_summary(link_text)
+                        current["title"] = headline
+                        current["url"] = url
+                        if summary:
+                            current["summary"] = summary
+                    if not current.get("date") and pending_time:
+                        current["date"] = pending_time
+                        pending_time = None
+            else:
+                # Not an article URL; check for time suffix (36kr author+time line pattern)
+                time_suffix = _extract_time_suffix(text)
+                if time_suffix and current and "url" in current and "date" not in current:
+                    current["date"] = time_suffix
+                    flush()
             continue
 
         if text.startswith("|") and text.endswith("|"):
@@ -363,17 +503,18 @@ def parse_markdown_payload(raw: str, default_source: str) -> List[Dict[str, obje
     return articles
 
 
-def parse_input(raw: str, default_source: str) -> List[Dict[str, object]]:
-    parsed = parse_json_payload(raw, default_source)
+def parse_input(raw: str, default_source: str, fallback_to_now: bool = False) -> List[Dict[str, object]]:
+    parsed = parse_json_payload(raw, default_source, fallback_to_now=fallback_to_now)
     if parsed is not None:
         return parsed
-    return parse_markdown_payload(raw, default_source)
+    return parse_markdown_payload(raw, default_source, fallback_to_now=fallback_to_now)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Normalize agent-reach text into structured AI news records.")
     parser.add_argument("--input", help="Path to raw agent-reach output. Reads stdin when omitted.")
     parser.add_argument("--source", required=True, help="Default source name when input items do not include it.")
+    parser.add_argument("--fallback-to-now", action="store_true", help="Use current time when no publish time is found (e.g. GitHub Trending).")
     return parser.parse_args()
 
 
@@ -387,7 +528,7 @@ def read_input(path: Optional[str]) -> str:
 def main() -> int:
     args = parse_args()
     raw = read_input(args.input)
-    articles = parse_input(raw, args.source)
+    articles = parse_input(raw, args.source, fallback_to_now=args.fallback_to_now)
     payload = {
         "fetched_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "articles": articles,

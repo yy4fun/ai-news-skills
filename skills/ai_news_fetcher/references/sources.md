@@ -25,8 +25,23 @@
   - `https://www.cmswire.com/`
 - CX Today
   - `https://www.cxtoday.com/latest-news/`
+- GitHub Trending
+  - `https://github.com/trending?since=daily`
+- Google DeepMind博客 (**暂停** — jina/agent-reach 无法获取标题和日期，需 browser 模式)
+  - `https://deepmind.google/discover/blog/`
+- Google Cloud博客
+  - `https://cloud.google.com/blog/`
 
 ## 特殊规则
+
+### GitHub Trending
+
+- 无发布时间字段，normalize 时必须加 `--fallback-to-now`，用抓取时间代替
+- 只保留标题或描述命中 AI 关键词的项目（agent、model、LLM、RAG、inference、diffusion 等）
+
+### Google Cloud博客
+
+- 无发布时间字段，normalize 时必须加 `--fallback-to-now`，用抓取时间代替
 
 ### 36氪快讯-AI
 
