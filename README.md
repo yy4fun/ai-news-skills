@@ -80,29 +80,45 @@ agent-reach doctor    # 验证安装
 
 ## Quick Start
 
-### 1. 克隆仓库
+把下面这段话发给你的 AI agent（Claude Code / OpenClaw / Cursor 等），它会自动完成所有安装：
+
+```
+帮我安装 AI News Skills：
+
+1. 先装 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md
+2. 然后克隆并安装 skills：
+   git clone git@github.com:yy4fun/ai-news-skills.git
+   cd ai-news-skills && ./install.sh
+3. 把 bitable_target.example.json 复制为 bitable_target.json，我来填飞书配置
+4. 跑一次采集测试，确认管道正常
+```
+
+就这样，agent 会帮你搞定。
+
+### 如果你想手动装
+
+<details>
+<summary>展开手动安装步骤</summary>
+
+#### 1. 安装 Agent Reach
+
+```bash
+pip install agent-reach
+agent-reach install --env=auto
+agent-reach doctor    # 验证安装
+```
+
+#### 2. 克隆并安装 Skills
 
 ```bash
 git clone git@github.com:yy4fun/ai-news-skills.git
 cd ai-news-skills
-```
-
-### 2. 一键安装
-
-```bash
 ./install.sh
 ```
 
-安装脚本会自动完成：
-
-1. 检测并安装 [Agent Reach](https://github.com/Panniantong/Agent-Reach)（如未安装）
-2. 把 `ai_news_fetcher` 和 `ai_news_reporter` 安装到 `~/.openclaw/workspace/skills/`
-3. 运行 `agent-reach doctor` 验证环境
-
-### 3. 配置飞书多维表格
+#### 3. 配置飞书多维表格
 
 ```bash
-# 复制示例配置
 cp ~/.openclaw/workspace/skills/ai_news_fetcher/bitable_target.example.json \
    ~/.openclaw/workspace/skills/ai_news_fetcher/bitable_target.json
 
@@ -122,37 +138,19 @@ cp ~/.openclaw/workspace/skills/ai_news_reporter/bitable_target.example.json \
 }
 ```
 
-### 4. 验证采集管道
-
-不用等 cron，手动跑一次看看效果：
+#### 4. 验证采集管道
 
 ```bash
 cd ~/.openclaw/workspace/skills/ai_news_fetcher
 
-# 单源测试：抓取 OpenAI 新闻并解析
+# 单源测试
 curl -s "https://r.jina.ai/https://openai.com/zh-Hans-CN/news/" \
   | python3 normalize_agent_reach.py --source "OpenAI新闻"
-
-# 单源测试：GitHub Trending（无日期源，加 --fallback-to-now）
-curl -s "https://r.jina.ai/https://github.com/trending?since=daily" \
-  | python3 normalize_agent_reach.py --source "GitHub Trending" --fallback-to-now
-
-# 完整管道测试（含入表 JSON 生成）
-curl -s "https://r.jina.ai/https://www.cls.cn/subject/1321" \
-  | python3 normalize_agent_reach.py --source "财联社-AI" \
-  | python3 build_source_items.py --format bitable_records
 ```
 
-输出是 JSON 格式的结构化新闻记录，包含 `title`、`url`、`date`、`summary` 等字段。
+输出 JSON 格式的结构化新闻记录就说明管道正常。
 
-### 5. 配置 cron 定时采集
-
-在 OpenClaw 中配置定时任务，让 fetcher 按你的节奏自动运行。建议：
-
-- **先跑 fetcher** 采集入表
-- **再跑 reporter** 生成日报
-
-两个 skill 分开运行，不要混在一起。
+</details>
 
 ## 目录结构
 
