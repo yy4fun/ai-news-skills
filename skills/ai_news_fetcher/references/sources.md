@@ -1,36 +1,8 @@
 # 新闻源
 
-这里只维护两类信息：
+源地址唯一真相源：`sources.json`
 
-1. 当前主链源地址
-2. 真正的源级特殊规则
-
-## 当前默认主链
-
-- 财联社-AI
-  - `https://www.cls.cn/subject/1321`
-- 36氪-AI
-  - `https://36kr.com/motif/327686782977`
-- 36氪快讯-AI
-  - `https://36kr.com/newsflashes/`
-- OpenAI新闻
-  - `https://openai.com/zh-Hans-CN/news/`
-- Anthropic新闻
-  - `https://www.anthropic.com/news`
-- Forrester博客
-  - `https://www.forrester.com/blogs/`
-- Readhub-AI
-  - `https://readhub.cn/news/ai`
-- CMSWire
-  - `https://www.cmswire.com/`
-- CX Today
-  - `https://www.cxtoday.com/latest-news/`
-- GitHub Trending
-  - `https://github.com/trending?since=daily`
-- Google DeepMind博客 (**暂停** — jina/agent-reach 无法获取标题和日期，需 browser 模式)
-  - `https://deepmind.google/discover/blog/`
-- Google Cloud博客
-  - `https://cloud.google.com/blog/`
+后续加减源，只改 `sources.json` 这一个文件。
 
 ## 特殊规则
 
@@ -55,15 +27,6 @@
 
 ## 暂不进入主链
 
-- RSS
+- RSS（SteveBlank 已在 sources.json 中但未接入 cron 主链）
 - 微信公众号
 - Twitter / X
-
-## 维护原则
-
-这里只是新闻源地址的唯一真相源。
-
-后续加减源，只改：
-
-- `references/sources.md`
-- `fetcher.py`

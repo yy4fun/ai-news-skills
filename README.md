@@ -156,7 +156,7 @@ agent 会自动完成所有安装和配置（包括依赖 [Agent Reach](https://
 
 ### 2. 新闻源（可选）
 
-默认已配置多个中英文源，开箱即用。如需增减源，编辑 `fetcher.py` 中的 `PUBLIC_WEB_SOURCES` 列表，并在 `references/sources.md` 中同步记录。
+默认已配置多个中英文源，开箱即用。如需增减源，只需编辑 `sources.json` 这一个文件。
 
 ### 3. 定时采集（可选）
 
@@ -213,7 +213,7 @@ skills/
 ├── ai_news_fetcher/
 │   ├── SKILL.md                          # skill 说明（给 AI agent 读的）
 │   ├── _meta.json                        # skill 元数据
-│   ├── fetcher.py                        # 源配置 & HTML 采集逻辑
+│   ├── sources.json                      # 新闻源唯一配置（加减源只改这里）
 │   ├── normalize_agent_reach.py          # jina markdown → 结构化记录
 │   ├── build_source_items.py             # 结构化记录 → 飞书入表 JSON
 │   ├── bitable_target.example.json       # 飞书配置示例
@@ -244,8 +244,8 @@ skills/
 
 ## 添加新源
 
-1. 在 `fetcher.py` 的 `PUBLIC_WEB_SOURCES` 列表中添加源配置
-2. 在 `references/sources.md` 中记录源地址和特殊规则
+1. 在 `sources.json` 中添加源配置
+2. 如有特殊规则，在 `references/sources.md` 中记录
 3. 用管道命令手动测试：
    ```bash
    curl -s "https://r.jina.ai/新源URL" \

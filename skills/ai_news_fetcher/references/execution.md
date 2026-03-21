@@ -127,7 +127,7 @@ cron 模式下必须遵守：
 - `normalize_agent_reach.py` — 解析 agent-reach 原始文本，提取结构化字段（标题、链接、时间、摘要），处理时间标准化。**cron 默认管道必经环节。**
 - `build_source_items.py` — 将结构化记录转为飞书 bitable 格式，完成 Unix 毫秒时间戳转换、字段映射、哈希计算。**cron 默认管道必经环节。**
 
-`fetcher.py` 当前只保留作历史调试脚本，不再作为默认采集主路径。
+`sources.json` — 所有新闻源的唯一配置文件。加减源只改这一个文件。
 
 ## 飞书补充模式参数约定
 

@@ -147,9 +147,9 @@ description: 当需要采集公开网页 AI 新闻、补抓某几个新闻源、
 - `normalize_agent_reach.py`：从 agent-reach 原始文本中提取结构化字段、解析时间、清洗摘要
 - `build_source_items.py`：将结构化记录转为飞书 bitable 格式、完成 Unix 毫秒时间戳转换、字段映射、哈希计算
 
-补充：
+源配置：
 
-- `fetcher.py` 保留为历史调试/排障脚本，不再作为默认主入口。
+- `sources.json`：所有新闻源的唯一配置文件（名称、URL、关键词过滤、fallback_to_now 等）
 
 ## 已知坑
 
