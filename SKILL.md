@@ -1,10 +1,6 @@
 ---
 name: ai-news-skills
-description: >
-  AI 新闻全自动工作流：采集公开网页新闻、生成日报与早报导读、合成周报趋势与深度解读。
-  包含三个协作 skill：ai_news_fetcher（采集）、ai_news_reporter（日报）、ai_weekly_reporter（周报）。
-  触发场景：抓取AI新闻、采集新闻源、生成日报、写signal、发早报导读、生成周报、
-  合成趋势线、更新产业链观察、cron新闻采集、cron日报生成、cron周报生成。
+description: "AI 新闻全自动工作流：采集公开网页新闻、生成日报与早报导读、合成周报趋势与深度解读。包含三个协作 skill：ai_news_fetcher（采集）、ai_news_reporter（日报）、ai_weekly_reporter（周报）。"
 license: Apache-2.0
 ---
 

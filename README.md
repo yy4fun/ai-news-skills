@@ -2,7 +2,7 @@
 
 一套面向 OpenClaw / Claude Code 的 AI 新闻自动化工作流。
 
-> A pair of OpenClaw-compatible skills: one collects AI news from public web sources into a Feishu bitable, and the other generates daily briefs and morning guides from the collected data.
+> Three OpenClaw-compatible skills that automate the full AI news pipeline: collect from public web sources into Feishu bitable, generate daily signal briefs with morning guides, and synthesize weekly trend reports with deep dives.
 
 ## 它能做什么
 
@@ -118,6 +118,20 @@ https://飞书文档链接
 
 ## Quick Start
 
+### 方式一：从 ClawHub 安装（推荐）
+
+已上架 [ClawHub](https://clawhub.ai)，直接发给你的 AI agent：
+
+```
+clawhub install ai-news-fetcher
+clawhub install ai-news-reporter
+clawhub install ai-weekly-reporter
+```
+
+或搜索 `ai news` 找到三个 skill。
+
+### 方式二：从 GitHub 安装
+
 复制下面这句话发给你的 AI agent（Claude Code / OpenClaw / Cursor 等）：
 
 ```
@@ -126,7 +140,7 @@ https://飞书文档链接
 
 agent 会自动完成所有安装和配置（包括依赖 [Agent Reach](https://github.com/Panniantong/Agent-Reach)），装完让你填飞书表信息就行。
 
-### 分步安装
+### 方式三：分步安装
 
 如果你想分开装，也是发给 agent：
 
