@@ -323,7 +323,8 @@ skills/
     ├── SKILL.md
     └── references/
         ├── reporting.md                  # 周报执行流程
-        └── output-template.md            # 周报模板
+        ├── output-template.md            # 周报模板
+        └── analysis_framework.md         # 深入分析框架（可通过反馈进化）
 ```
 
 ## 核心设计原则
@@ -355,6 +356,20 @@ skills/
 - 真实 `open_id` / `chat_id`
 - cron 任务配置
 - 运行日志和历史回执
+
+## Changelog
+
+### v1.1.0 (2026-03-22)
+
+- **深入分析框架**：新增 `analysis_framework.md`，系统化深度解读方法（玩家拆解 → 竞争本质 → 终局判断 → 多视角扫描 → 自我追问），支持通过群聊反馈自动进化
+- **图片采集**：周报深度解读自动从原文提取数据图表、架构图、产品截图（每篇最多 2 张，总计最多 3 张）
+- **观察链集成**：深度解读结束后自动检查 `watch_chains.md`，将新发现转化为跟踪项
+- **日报信号筛选优化**：reporting.md 增加信号质量门槛和反方观点要求
+- **cron 精简**：cron 任务消息不再重复 skill 内部逻辑，只传参数和防护栏
+
+### v1.0.0 (2026-03-21)
+
+- 首次发布：采集 + 日报 + 周报三个 skill 打包上架
 
 ## License
 
