@@ -358,4 +358,4 @@ skills/
 
 ## License
 
-[Apache License 2.0](LICENSE) — 可以自由使用、修改和分发，但需要保留版权声明和署名。
+[MIT License](LICENSE) — 可以自由使用、修改和分发，保留版权声明即可。
