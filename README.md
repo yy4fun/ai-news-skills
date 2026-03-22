@@ -1,5 +1,7 @@
 # AI News Skills
 
+[![version](https://img.shields.io/badge/version-1.3.0-blue)](CHANGELOG.md) [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 一套面向 OpenClaw / Claude Code 的 AI 新闻自动化工作流。
 
 > Three OpenClaw-compatible skills that automate the full AI news pipeline: collect from public web sources into Feishu bitable, generate daily signal briefs with morning guides, and synthesize weekly trend reports with deep dives.
@@ -359,17 +361,7 @@ skills/
 
 ## Changelog
 
-### v1.1.0 (2026-03-22)
-
-- **深入分析框架**：新增 `analysis_framework.md`，系统化深度解读方法（玩家拆解 → 竞争本质 → 终局判断 → 多视角扫描 → 自我追问），支持通过群聊反馈自动进化
-- **图片采集**：周报深度解读自动从原文提取数据图表、架构图、产品截图（每篇最多 2 张，总计最多 3 张）
-- **观察链集成**：深度解读结束后自动检查 `watch_chains.md`，将新发现转化为跟踪项
-- **日报信号筛选优化**：reporting.md 增加信号质量门槛和反方观点要求
-- **cron 精简**：cron 任务消息不再重复 skill 内部逻辑，只传参数和防护栏
-
-### v1.0.0 (2026-03-21)
-
-- 首次发布：采集 + 日报 + 周报三个 skill 打包上架
+当前版本：**v1.3.0** — 详见 [CHANGELOG.md](CHANGELOG.md)
 
 ## License
 

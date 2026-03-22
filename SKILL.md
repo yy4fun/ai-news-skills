@@ -2,7 +2,7 @@
 name: ai-news-skills
 description: "AI 新闻全自动工作流：采集公开网页新闻、生成日报与早报导读、合成周报趋势与深度解读。包含三个协作 skill：ai_news_fetcher（采集）、ai_news_reporter（日报）、ai_weekly_reporter（周报）。"
 license: MIT
-version: 1.1.0
+version: 1.3.0
 ---
 
 # AI News Skills
