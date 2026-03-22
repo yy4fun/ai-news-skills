@@ -82,7 +82,7 @@
 
 生成后：
 1. 保存到 `workspace/weekly_reports/YYYY-MM-DD.md`（以周报覆盖的最后一天日期命名）
-2. 同步到飞书 wiki 文档
+2. 同步到飞书 wiki：读取 `wiki_target.json` 获取 `space_id`（整数）和 `parent_node_token`，调用 `create_space_node` 在父节点下创建子文档。**禁止**把 node_token 当 space_id 传。
 
 **飞书文档内容必须和本地 MD 副本完全一致，不得省略。**
 
@@ -127,7 +127,7 @@
 按 `references/output-template.md` 的"深入分析模板"生成独立文档。
 
 1. 保存到 `workspace/deep_analysis/YYYY-MM-DD-{topic_slug}.md`
-2. 同步到飞书 wiki 文档
+2. 同步到飞书 wiki：同周报的 wiki 发布规则（读 `wiki_target.json` 获取 space_id 和 parent_node_token）
 3. 回填周报中的深入分析文档链接
 
 **门控 ◆** 检查深入分析包含：选题理由、原文阅读数量、玩家拆解表、竞争本质、终局判断、不确定性。缺少任何一项不合格。

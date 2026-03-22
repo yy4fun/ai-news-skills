@@ -20,8 +20,8 @@ description: >
 ## 前置依赖
 
 - **飞书多维表格**：需要原始新闻表（`bitable_target.json`）和关注清单表（`watch_target.json`），将表的 `app_token`、`table_id` 等信息填入对应配置文件（参考 `.example.json`）
+- **飞书 wiki 知识库**：日报文档挂载到飞书知识库，配置 `wiki_target.json`（space_id + parent_node_token）
 - **ai_news_fetcher**：日报依赖 fetcher 采集的原始新闻数据
-- **飞书 wiki 知识库**：日报文档挂载到飞书知识库（可选）
 
 > **凭证说明**：本 skill 不内置任何飞书凭证。配置文件由用户在本地创建，已被 `.gitignore` 排除。仓库中的 `.example.json` 仅包含占位符，不含真实令牌。
 

@@ -82,7 +82,9 @@
 
 **门控 ◆** 检查日报文档创建/更新成功，且包含完整的一级结构（今日新增信号、分主题观察、今日判断更新、高优先级待验证问题、关键原文链接）。
 
-生成后，同时保存一份到 `workspace/daily_reports/YYYY-MM-DD.md`。
+生成后：
+1. 保存本地副本到 `workspace/daily_reports/YYYY-MM-DD.md`
+2. 同步到飞书 wiki：读取 `wiki_target.json` 获取 `space_id`（整数）和 `parent_node_token`，调用 `create_space_node` 在父节点下创建子文档。**禁止**把 node_token 当 space_id 传。
 
 ### Step 6：生成早报导读
 
@@ -90,7 +92,11 @@
 
 ### Step 7：更新关注清单
 
-根据本轮日报产出，更新飞书关注清单表（`watch_target.json`）：
+根据本轮日报产出，更新飞书关注清单表（`watch_target.json`）。
+
+**注意**：关注清单是 wiki 内嵌的多维表格。如果 watch_target.json 中没有 `app_token` 字段，需要先通过飞书 wiki API `get_node`（传入 wiki_url 中的 node_token）获取对应的 bitable app_token，然后再调用 bitable API 写入。不要直接用 node_token 当 app_token。
+
+更新规则：
 
 1. **新增**：本轮日报产出的"待验证问题"和"高优先级待验证问题"写入清单，每条记录必须填写以下字段：
    - `问题`：待验证问题的完整描述
