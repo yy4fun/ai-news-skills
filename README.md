@@ -120,15 +120,11 @@ https://飞书文档链接
 
 ### 方式一：从 ClawHub 安装（推荐）
 
-已上架 [ClawHub](https://clawhub.ai)，直接发给你的 AI agent：
+已上架 [ClawHub](https://clawhub.ai)，一个命令装全套：
 
 ```
-clawhub install ai-news-fetcher
-clawhub install ai-news-reporter
-clawhub install ai-weekly-reporter
+clawhub install ai-news-skills
 ```
-
-或搜索 `ai news` 找到三个 skill。
 
 ### 方式二：从 GitHub 安装
 
